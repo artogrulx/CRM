@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<title>Simple CRM</title>
+	<style>
+		body{font-family:system-ui,Arial,sans-serif;margin:20px;background:#f8f9fb;color:#202124}
+		*{box-sizing:border-box}
+		input,button,select{padding:8px 10px;margin:4px 0;border:1px solid #ccc;border-radius:6px;font-size:0.95rem}
+		button{cursor:pointer;background:#2563eb;color:#fff;border:none}
+		button:hover{background:#1d4ed8}
+		.hidden{display:none}
+		.container{max-width:960px;margin:0 auto}
+		.topbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:18px}
+		.topbar button{margin:0}
+		.section{background:#fff;border:1px solid #dde3ea;border-radius:12px;padding:18px;margin-top:16px;box-shadow:0 6px 18px rgba(15,23,42,.04)}
+		.section h3{margin-top:0}
+		.form-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start}
+		.form-row label{display:flex;flex-direction:column;font-size:.92rem;color:#444;min-width:140px}
+		.form-row input,.form-row select{width:220px;background:#fff}
+		table{border-collapse:collapse;width:100%;margin-top:10px}
+		td,th{border:1px solid #e2e8f0;padding:10px;text-align:left}
+		th{background:#f1f5f9;color:#334155}
+		td{background:#fff}
+		.actions button{margin-right:8px}
+		.status-pill{display:inline-block;padding:4px 10px;border-radius:999px;font-size:.85rem;color:#fff}
+		.status-pending{background:#f59e0b}
+		.status-shipped{background:#0ea5e9}
+		.status-cancelled{background:#ef4444}
+	</style>
+</head>
+<body>
+	<h2>Simple CRM</h2>
+
+	<div id="login">
+		<label>Username <input id="user" value=""></label>
+		<label>Password <input id="pass" type="password"></label>
+		<button id="loginBtn">Login</button>
+		<div id="loginMsg" style="color:rgb(42, 153, 60)"></div>
+	</div>
+
+	<div id="app" class="hidden">
+		<div class="topbar" style="position:relative;">
+			<div style="display:flex;align-items:center;gap:8px;">
+				<span>Logged in as <strong><span id="who"></span></strong></span>
+				<button id="accountMenuBtn" style="background:#fff;color:#2563eb;border:1px solid #2563eb;padding:6px 10px;">⋮</button>
+			</div>
+			<div style="margin-left:auto;display:flex;gap:10px;align-items:center;">
+				<button id="ordersBtn">Orders</button>
+			</div>
+			<div id="accountMenu" class="hidden" style="position:absolute;top:48px;left:0;background:#fff;border:1px solid #ccd6e3;border-radius:10px;padding:10px;box-shadow:0 6px 18px rgba(15,23,42,.12);z-index:10;min-width:180px;">
+				<button id="accountInfoBtn" style="width:100%;text-align:left;background:none;color:#111;border:none;padding:8px 6px;">Account info</button>
+				<button id="signOutBtn" style="width:100%;text-align:left;background:none;color:#111;border:none;padding:8px 6px;">Sign out</button>
+			</div>
+		</div>
+
+		<div class="section">
+			<h3>Add Contact</h3>
+			<div class="form-row">
+				<label>Name <input id="name" placeholder="Name"></label>
+				<label>Email <input id="email" placeholder="Email"></label>
+				<label>Phone <input id="phone" placeholder="Phone"></label>
+				<button id="add">Add Contact</button>
+			</div>
+		</div>
+
+		<div class="section">
+			<h3>Contacts</h3>
+			<table id="tbl">
+				<thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Action</th></tr></thead>
+				<tbody></tbody>
+			</table>
+		</div>
+
+		<div id="orders" class="section hidden">
+			<h3>Orders</h3>
+			<div class="topbar" style="padding:0;gap:10px;justify-content:flex-start;">
+				<button id="newOrderBtn" style="background:#10b981">New Order</button>
+			</div>
+
+			<div id="newOrderSection" class="section hidden">
+				<h4>Create New Order</h4>
+				<div class="form-row">
+					<label>Customer <input id="orderCustomerName" placeholder="Customer name"></label>
+					<label>Date <input id="orderDate" type="date"></label>
+					<label>Status
+						<select id="orderStatusSelect">
+							<option value="pending">Pending</option>
+							<option value="shipped">Shipped</option>
+							<option value="cancelled">Cancelled</option>
+						</select>
+					</label>
+					<label>Total <input id="orderTotal" placeholder="420.00"></label>
+					<label>Description <input id="orderDescription" placeholder="Order description"></label>
+					<label>Invoice notes <textarea id="orderNotes" placeholder="Write invoice notes here" style="min-height:80px;width:100%;"></textarea></label>
+					<button id="addOrder">Save Order</button>
+				</div>
+			</div>
+
+			<div id="ordersListSection">
+				<table id="ordersTbl">
+					<thead><tr><th>Customer</th><th>Date</th><th>Status</th><th>Total</th><th>Description</th><th>Invoice</th></tr></thead>
+					<tbody></tbody>
+				</table>
+			</div>
+		</div>
+
+		<div id="invoicePage" class="section hidden">
+			<div class="topbar" style="padding:0;justify-content:space-between;">
+				<strong>Invoice</strong>
+				<button id="closeInvoice" style="background:#ef4444">Back</button>
+			</div>
+			<div class="form-row" style="flex-direction:column;gap:12px;">
+				<div><strong>Customer:</strong> <span id="invoiceCustomer"></span></div>
+				<div><strong>Date:</strong> <span id="invoiceDate"></span></div>
+				<div><strong>Status:</strong> <span id="invoiceStatus"></span></div>
+				<div><strong>Total:</strong> <span id="invoiceTotal"></span></div>
+				<label>Invoice notes <textarea id="invoiceNotes" placeholder="Write notes for this invoice" style="min-height:120px;width:100%;"></textarea></label>
+				<button id="saveInvoiceNotes" style="background:#2563eb">Save Notes</button>
+				<button id="downloadInvoice" style="background:#10b981">Download Invoice</button>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		const VALID_USERS = { ilkin:'20', adin:'E2' };
+		const SERVER_PORT = 10101;
+		const SERVER_URL = (location.protocol === 'http:' || location.protocol === 'https:')
+			? `${location.protocol}//${window.location.hostname}:${SERVER_PORT}`
+			: `http://127.0.0.1:${SERVER_PORT}`;
+		const USE_SERVER = true;
+		const APP_STORAGE_KEY = 'crmAppData';
+
+		const loginDiv = document.getElementById('login');
+		const appDiv = document.getElementById('app');
+		const loginMsg = document.getElementById('loginMsg');
+		const who = document.getElementById('who');
+		const accountMenu = document.getElementById('accountMenu');
+
+		let currentUser = null;
+		let activeInvoiceOrder = null;
+
+		function escapeHtml(str) {
+			if(!str) return '';
+			return String(str)
+				.replace(/&/g, '&amp;')
+				.replace(/</g, '&lt;')
+				.replace(/>/g, '&gt;')
+				.replace(/"/g, '&quot;')
+				.replace(/'/g, '&#039;');
+		}
+
+		const COOKIE_STORAGE_KEY = 'crmAppDataCookie';
+
+		function setCookie(name, value, days = 30) {
+			const expires = new Date(Date.now() + days * 864e5).toUTCString();
+			document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/`;
+		}
+
+		function getCookie(name) {
+			return document.cookie.split('; ').reduce((acc, cookie) => {
+				const [key, value] = cookie.split('=');
+				return key === name ? decodeURIComponent(value || '') : acc;
+			}, '');
+		}
+
+		function saveDataToCookie(data) {
+			try {
+				setCookie(COOKIE_STORAGE_KEY, JSON.stringify(data));
+			} catch (e) {
+				console.warn('Cookie save failed:', e);
+			}
+		}
+
+		function loadDataFromCookie() {
+			try {
+				const raw = getCookie(COOKIE_STORAGE_KEY);
+				return raw ? JSON.parse(raw) : null;
+			} catch (e) {
+				console.warn('Cookie load failed:', e);
+				return null;
+			}
+		}
+
+		async function loadAppData() {
+			if (USE_SERVER) {
+				try {
+					const response = await fetch(`${SERVER_URL}/get-data`);
+					if (response.ok) {
+						return await response.json();
+					}
+					console.warn('Server returned', response.status);
+				} catch (error) {
+					console.warn('Server unavailable, falling back to cookie storage:', error);
+				}
+			}
+
+			const cookieData = loadDataFromCookie();
+			if (cookieData) {
+				return cookieData;
+			}
+
+			try {
+				return JSON.parse(localStorage.getItem(APP_STORAGE_KEY) || '{"users":{}}');
+			} catch (e) {
+				return { users: {} };
+			}
+		}
+
+		async function saveAppData(data) {
+			if (USE_SERVER) {
+				try {
+					const response = await fetch(`${SERVER_URL}/save-data`, {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify(data)
+					});
+					if (response.ok) {
+						return;
+					}
+					console.warn('Save request failed with status', response.status);
+				} catch (error) {
+					console.warn('Save failed, storing in cookies instead:', error);
+				}
+			}
+
+			saveDataToCookie(data);
+			try {
+				localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(data));
+			} catch (e) {
+				console.warn('LocalStorage save failed:', e);
+			}
+		}
+
+		function ensureUserRecord(data) {
+			if (!data.users) data.users = {};
+			if (currentUser && !data.users[currentUser]) {
+				data.users[currentUser] = { contacts: [], orders: [] };
+			}
+		}
+
+		async function getAppData() {
+			const data = await loadAppData();
+			ensureUserRecord(data);
+			return data;
+		}
+
+		async function getContacts() {
+			return (await getAppData()).users[currentUser].contacts;
+		}
+
+		async function setContacts(list) {
+			const data = await getAppData();
+			data.users[currentUser].contacts = list;
+			await saveAppData(data);
+		}
+
+		async function getOrders() {
+			return (await getAppData()).users[currentUser].orders;
+		}
+
+		async function setOrders(list) {
+			const data = await getAppData();
+			data.users[currentUser].orders = list;
+			await saveAppData(data);
+		}
+
+		async function showApp(user) {
+			currentUser = user;
+			const data = await getAppData();
+			ensureUserRecord(data);
+			await saveAppData(data);
+			loginDiv.classList.add('hidden');
+			appDiv.classList.remove('hidden');
+			who.textContent = user;
+			document.getElementById('orders').classList.add('hidden');
+			document.getElementById('invoicePage').classList.add('hidden');
+			await renderAll();
+		}
+
+		document.getElementById('loginBtn').addEventListener('click', async ()=>{
+			const u = document.getElementById('user').value.trim();
+			const p = document.getElementById('pass').value;
+			if (VALID_USERS[u] && VALID_USERS[u] === p) {
+				loginMsg.textContent = '';
+				await showApp(u);
+			} else {
+				loginMsg.textContent = 'Invalid credentials';
+			}
+		});
+
+		function signOut() {
+			currentUser = null;
+			appDiv.classList.add('hidden');
+			loginDiv.classList.remove('hidden');
+		}
+
+		document.getElementById('accountMenuBtn').addEventListener('click', (e)=>{
+			e.stopPropagation();
+			accountMenu.classList.toggle('hidden');
+		});
+
+		document.getElementById('accountInfoBtn').addEventListener('click', ()=>{
+			alert(`User: ${currentUser}
+Role: ${currentUser === 'adin' ? 'Admin' : 'User'}`);
+			accountMenu.classList.add('hidden');
+		});
+
+		document.getElementById('signOutBtn').addEventListener('click', ()=>{
+			accountMenu.classList.add('hidden');
+			signOut();
+		});
+
+		document.addEventListener('click', (event)=>{
+			if (!accountMenu.contains(event.target) && event.target !== document.getElementById('accountMenuBtn')) {
+				accountMenu.classList.add('hidden');
+			}
+		});
+
+		document.getElementById('add').addEventListener('click', async ()=>{
+			const n = document.getElementById('name').value.trim();
+			const e = document.getElementById('email').value.trim();
+			const p = document.getElementById('phone').value.trim();
+			if (!n) return;
+			const list = await getContacts();
+			list.push({ id: Date.now(), name: n, email: e, phone: p });
+			await setContacts(list);
+			await renderAll();
+			document.getElementById('name').value = '';
+			document.getElementById('email').value = '';
+			document.getElementById('phone').value = '';
+		});
+
+		document.getElementById('ordersBtn').addEventListener('click', ()=>{
+			document.getElementById('orders').classList.toggle('hidden');
+			document.getElementById('invoicePage').classList.add('hidden');
+		});
+
+		document.getElementById('newOrderBtn').addEventListener('click', ()=>{
+			document.getElementById('newOrderSection').classList.toggle('hidden');
+			document.getElementById('invoicePage').classList.add('hidden');
+		});
+
+		document.getElementById('addOrder').addEventListener('click', async ()=>{
+			const customer = document.getElementById('orderCustomerName').value.trim();
+			const date = document.getElementById('orderDate').value;
+			const status = document.getElementById('orderStatusSelect').value;
+			const total = document.getElementById('orderTotal').value.trim();
+			const desc = document.getElementById('orderDescription').value.trim();
+			const notes = document.getElementById('orderNotes').value.trim();
+			if (!customer || !date) return;
+			const list = await getOrders();
+			list.push({ id: Date.now(), customer, date, status, total, desc, notes });
+			await setOrders(list);
+			await renderAll();
+			document.getElementById('orderCustomerName').value = '';
+			document.getElementById('orderDate').value = '';
+			document.getElementById('orderTotal').value = '';
+			document.getElementById('orderDescription').value = '';
+			document.getElementById('orderNotes').value = '';
+			document.getElementById('newOrderSection').classList.add('hidden');
+		});
+
+		function openInvoicePage(order) {
+			activeInvoiceOrder = order;
+			document.getElementById('orders').classList.add('hidden');
+			document.getElementById('invoicePage').classList.remove('hidden');
+			document.getElementById('invoiceCustomer').textContent = order.customer;
+			document.getElementById('invoiceDate').textContent = order.date;
+			document.getElementById('invoiceStatus').textContent = order.status;
+			document.getElementById('invoiceTotal').textContent = order.total ? `$${order.total}` : '';
+			document.getElementById('invoiceNotes').value = order.notes || '';
+		}
+
+		function closeInvoicePage() {
+			activeInvoiceOrder = null;
+			document.getElementById('invoicePage').classList.add('hidden');
+			document.getElementById('orders').classList.remove('hidden');
+		}
+
+		async function saveInvoiceNotes() {
+			if (!activeInvoiceOrder) return;
+			const notes = document.getElementById('invoiceNotes').value.trim();
+			const orders = await getOrders();
+			const index = orders.findIndex(x => x.id === activeInvoiceOrder.id);
+			if (index !== -1) {
+				orders[index].notes = notes;
+				await setOrders(orders);
+				activeInvoiceOrder.notes = notes;
+				alert('Invoice notes saved.');
+			}
+		}
+
+		function downloadInvoice() {
+			if (!activeInvoiceOrder) return;
+			const invoiceText = [
+				`Invoice for ${activeInvoiceOrder.customer}`,
+				`Date: ${activeInvoiceOrder.date}`,
+				`Status: ${activeInvoiceOrder.status}`,
+				`Total: $${activeInvoiceOrder.total}`,
+				`Notes: ${activeInvoiceOrder.notes || ''}`
+			].join('\n');
+			const blob = new Blob([invoiceText], { type: 'text/plain' });
+			const url = URL.createObjectURL(blob);
+			const link = document.createElement('a');
+			link.href = url;
+			link.download = `invoice-${activeInvoiceOrder.id}.txt`;
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+			URL.revokeObjectURL(url);
+		}
+
+		async function renderAll() {
+			const tbody = document.querySelector('#tbl tbody');
+			tbody.innerHTML = '';
+			const contacts = await getContacts();
+			contacts.forEach(item => {
+				const tr = document.createElement('tr');
+				tr.innerHTML = `<td>${escapeHtml(item.name)}</td><td>${escapeHtml(item.email)}</td><td>${escapeHtml(item.phone)}</td><td><button data-id="${item.id}">Delete</button></td>`;
+				tbody.appendChild(tr);
+			});
+			tbody.querySelectorAll('#tbl button').forEach(b => b.addEventListener('click', async e => {
+				const id = Number(e.target.getAttribute('data-id'));
+				const filtered = (await getContacts()).filter(x => x.id !== id);
+				await setContacts(filtered);
+				await renderAll();
+			}));
+
+			const oTbody = document.querySelector('#ordersTbl tbody');
+			oTbody.innerHTML = '';
+			const orders = await getOrders();
+			orders.forEach(order => {
+				const tr = document.createElement('tr');
+				tr.innerHTML = `<td>${escapeHtml(order.customer)}</td><td>${escapeHtml(order.date)}</td><td><span class="status-pill status-${order.status}">${order.status}</span></td><td>$${escapeHtml(order.total)}</td><td>${escapeHtml(order.desc)}</td><td><button class="invoiceBtn" data-order="${order.id}">Invoice</button></td>`;
+				oTbody.appendChild(tr);
+			});
+			oTbody.querySelectorAll('.invoiceBtn').forEach(btn => btn.addEventListener('click', async e => {
+				const id = Number(e.target.getAttribute('data-order'));
+				const order = (await getOrders()).find(x => x.id === id);
+				if (order) openInvoicePage(order);
+			}));
+		}
+
+		document.getElementById('closeInvoice').addEventListener('click', closeInvoicePage);
+		document.getElementById('saveInvoiceNotes').addEventListener('click', saveInvoiceNotes);
+		document.getElementById('downloadInvoice').addEventListener('click', downloadInvoice);
+	</script>
+</body>
+</html>
