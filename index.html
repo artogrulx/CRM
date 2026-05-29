@@ -37,6 +37,7 @@
 		<label>Username <input id="user" value=""></label>
 		<label>Password <input id="pass" type="password"></label>
 		<button id="loginBtn">Login</button>
+		<div id="loginHint" style="color:#555;font-size:.9rem;margin-top:6px;">Valid credentials: ilkin / 20 or adin / E2</div>
 		<div id="loginMsg" style="color:rgb(42, 153, 60)"></div>
 	</div>
 
@@ -280,14 +281,23 @@
 		}
 
 		document.getElementById('loginBtn').addEventListener('click', async ()=>{
-			const u = document.getElementById('user').value.trim();
-			const p = document.getElementById('pass').value;
+			const u = document.getElementById('user').value.trim().toLowerCase();
+			const p = document.getElementById('pass').value.trim();
 			if (VALID_USERS[u] && VALID_USERS[u] === p) {
 				loginMsg.textContent = '';
 				await showApp(u);
 			} else {
-				loginMsg.textContent = 'Invalid credentials';
+				loginMsg.textContent = 'Invalid credentials. Try ilkin / 20 or adin / E2.';
 			}
+		});
+
+		document.querySelectorAll('#user,#pass').forEach(input => {
+			input.addEventListener('keydown', (event) => {
+				if (event.key === 'Enter') {
+					event.preventDefault();
+					document.getElementById('loginBtn').click();
+				}
+			});
 		});
 
 		function signOut() {
