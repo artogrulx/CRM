@@ -11,6 +11,8 @@
 		button{cursor:pointer;background:#2563eb;color:#fff;border:none}
 		button:hover{background:#1d4ed8}
 		.hidden{display:none}
+		#loadingIndicator.hidden{display:none}
+		#loadingIndicator{display:flex;align-items:center;gap:8px;color:#2563eb;margin-top:12px}
 		.container{max-width:960px;margin:0 auto}
 		.topbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:18px}
 		.topbar button{margin:0}
@@ -28,6 +30,9 @@
 		.status-pending{background:#f59e0b}
 		.status-shipped{background:#0ea5e9}
 		.status-cancelled{background:#ef4444}
+		@keyframes spin {
+			to { transform: rotate(360deg); }
+		}
 	</style>
 </head>
 <body>
@@ -37,8 +42,11 @@
 		<label>Username <input id="user" value=""></label>
 		<label>Password <input id="pass" type="password"></label>
 		<button id="loginBtn">Login</button>
-		<div id="loginHint" style="color:#555;font-size:.9rem;margin-top:6px;">Valid credentials: ilkin / 20 or adin / E2</div>
 		<div id="loginMsg" style="color:rgb(42, 153, 60)"></div>
+		<div id="loadingIndicator" class="hidden">
+			<div style="width:20px;height:20px;border:3px solid #e5e7eb;border-top-color:#2563eb;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+			<span>Loading...</span>
+		</div>
 	</div>
 
 	<div id="app" class="hidden">
@@ -187,7 +195,10 @@
 		async function loadAppData() {
 			if (USE_SERVER) {
 				try {
-					const response = await fetch(`${SERVER_URL}/get-data`);
+					const controller = new AbortController();
+					const timeout = setTimeout(() => controller.abort(), 3000);
+					const response = await fetch(`${SERVER_URL}/get-data`, { signal: controller.signal });
+					clearTimeout(timeout);
 					if (response.ok) {
 						return await response.json();
 					}
@@ -212,11 +223,15 @@
 		async function saveAppData(data) {
 			if (USE_SERVER) {
 				try {
+					const controller = new AbortController();
+					const timeout = setTimeout(() => controller.abort(), 3000);
 					const response = await fetch(`${SERVER_URL}/save-data`, {
 						method: 'POST',
 						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify(data)
+						body: JSON.stringify(data),
+						signal: controller.signal
 					});
+					clearTimeout(timeout);
 					if (response.ok) {
 						return;
 					}
@@ -284,10 +299,12 @@
 			const u = document.getElementById('user').value.trim().toLowerCase();
 			const p = document.getElementById('pass').value.trim();
 			if (VALID_USERS[u] && VALID_USERS[u] === p) {
-				loginMsg.textContent = '';
+				document.getElementById('loadingIndicator').classList.remove('hidden');
+				document.getElementById('loginMsg').textContent = '';
 				await showApp(u);
+				document.getElementById('loadingIndicator').classList.add('hidden');
 			} else {
-				loginMsg.textContent = 'Invalid credentials. Try ilkin / 20 or adin / E2.';
+				document.getElementById('loginMsg').textContent = 'Invalid credentials. Try ilkin / 20 or adin / E2.';
 			}
 		});
 
@@ -431,12 +448,6 @@ Role: ${currentUser === 'adin' ? 'Admin' : 'User'}`);
 				tr.innerHTML = `<td>${escapeHtml(item.name)}</td><td>${escapeHtml(item.email)}</td><td>${escapeHtml(item.phone)}</td><td><button data-id="${item.id}">Delete</button></td>`;
 				tbody.appendChild(tr);
 			});
-			tbody.querySelectorAll('#tbl button').forEach(b => b.addEventListener('click', async e => {
-				const id = Number(e.target.getAttribute('data-id'));
-				const filtered = (await getContacts()).filter(x => x.id !== id);
-				await setContacts(filtered);
-				await renderAll();
-			}));
 
 			const oTbody = document.querySelector('#ordersTbl tbody');
 			oTbody.innerHTML = '';
@@ -446,11 +457,31 @@ Role: ${currentUser === 'adin' ? 'Admin' : 'User'}`);
 				tr.innerHTML = `<td>${escapeHtml(order.customer)}</td><td>${escapeHtml(order.date)}</td><td><span class="status-pill status-${order.status}">${order.status}</span></td><td>$${escapeHtml(order.total)}</td><td>${escapeHtml(order.desc)}</td><td><button class="invoiceBtn" data-order="${order.id}">Invoice</button></td>`;
 				oTbody.appendChild(tr);
 			});
-			oTbody.querySelectorAll('.invoiceBtn').forEach(btn => btn.addEventListener('click', async e => {
-				const id = Number(e.target.getAttribute('data-order'));
-				const order = (await getOrders()).find(x => x.id === id);
-				if (order) openInvoicePage(order);
-			}));
+		}
+
+		// Event delegation for contacts table delete buttons
+		const tblTbody = document.querySelector('#tbl tbody');
+		if (tblTbody) {
+			tblTbody.addEventListener('click', async e => {
+				if (e.target.tagName === 'BUTTON' && e.target.hasAttribute('data-id')) {
+					const id = Number(e.target.getAttribute('data-id'));
+					const filtered = (await getContacts()).filter(x => x.id !== id);
+					await setContacts(filtered);
+					await renderAll();
+				}
+			});
+		}
+
+		// Event delegation for orders table invoice buttons
+		const ordersTbody = document.querySelector('#ordersTbl tbody');
+		if (ordersTbody) {
+			ordersTbody.addEventListener('click', async e => {
+				if (e.target.classList.contains('invoiceBtn')) {
+					const id = Number(e.target.getAttribute('data-order'));
+					const order = (await getOrders()).find(x => x.id === id);
+					if (order) openInvoicePage(order);
+				}
+			});
 		}
 
 		document.getElementById('closeInvoice').addEventListener('click', closeInvoicePage);
